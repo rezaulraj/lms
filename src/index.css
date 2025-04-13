@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+.main-video-container {
+  width: 80%;
+  max-width: 800px;
+  margin-bottom: 1rem;
+}
+
+.main-video {
+  width: 100%;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+}
+
+.peers-video-container {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.peer-video-container {
+  width: 120px;
+  height: 90px;
+  margin: 2px;
+}
+
+.peer-video {
+  width: 100%;
+  height: 100%;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+}
+
+
+.slick-slide > div {
+  margin: 0px 5px;
+}
+
+.light-theme {
+  background-color: #fdfdfd;
+  --text-color: #000000;
+}
+
+/* Dark Theme */
+.dark-theme {
+  background-color: #0f172a;
+  --text-color: #fff;
+}
+
+.slick-prev:before,
+.slick-next:before {
+  font-family: "slick";
+  font-size: 20px;
+  line-height: 1;
+  opacity: 0.75;
+  color: var(--text-color);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.5s ease-out forwards;
+}
+
+@layer utilities {
+  .inputDiv {
+    @apply flex flex-col relative bg-white p-4 outline-none text-black;
+  }
+  .inputDiv input {
+    @apply bg-transparent border-none outline-none placeholder-transparent w-[210px] rounded;
+  }
+  .inputDiv span {
+    @apply absolute left-3 top-[40%] transform -translate-y-1/2 text-slate-500 tracking-[2px] pointer-events-none transition-all duration-300;
+  }
+  .inputDiv input:focus ~ span,
+  .inputDiv input:not(:placeholder-shown) ~ span,
+  .inputDiv input:valid ~ span {
+    @apply text-teal-400 transform -translate-y-[120%] translate-x-[20px] text-[13px] py-0 border-teal-400 tracking-[2px];
+  }
+}
