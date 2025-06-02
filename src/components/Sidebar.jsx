@@ -1,12 +1,14 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { BsFiletypePdf } from "react-icons/bs";
+
 // import Footer from "./Footer";
 // import { IoMdNotificationsOutline } from "react-icons/io";
 // import NotificationPanel from "./NotificationPanel";
 import { useAuth } from "./Auth";
 import { FaBookReader, FaUserCircle } from "react-icons/fa";
 import LogoutModal from "./LogoutModal";
-import { FaClipboardQuestion } from "react-icons/fa6";
+import { FaClipboardQuestion, FaFilePdf } from "react-icons/fa6";
 import { MdMyLocation } from "react-icons/md";
 // import { io } from "socket.io-client";
 // import notificationSound from "../../public/notification/Excuse-Me-Boss-You-Have-A-Text-Message.mp3";
@@ -317,7 +319,18 @@ const Sidebar = ({ children }) => {
                 <span className="flex-1 ms-3 whitespace-nowrap">My Exams</span>
               </Link>
             </li>
+            <li>
+              <Link
+                to="/user/genarate-image-to-pdf"
+                className="flex items-center p-2 text-gray-900 rounded-lg  hover:bg-gray-100  group"
+              >
+                <FaFilePdf className="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 0 group-hover:text-gray-900 " />
 
+                <span className="flex-1 ms-3 whitespace-nowrap">
+                  Image to Pdf Genarate
+                </span>
+              </Link>
+            </li>
             <li>
               <Link
                 to="/user/my-quizs"

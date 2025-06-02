@@ -48,6 +48,8 @@ import Spelling from "./Pages/vocab/Spelling";
 import MyExams from "./Pages/user/MyExams";
 import Myquizs from "./Pages/user/Myquizs";
 import MyBooks from "./Pages/user/MyBooks";
+import PaymentSuccess from "./Pages/PaymentSuccess";
+import PaymentFailed from "./Pages/PaymentFailed";
 
 function App() {
   return (
@@ -348,6 +350,27 @@ function App() {
                 <div>
                   <Navber />
                   <Terms />
+                  <Footer />
+                </div>
+              }
+            />
+
+            <Route
+              path="/payment-status"
+              element={
+                <div>
+                  <Navber />
+                  <PaymentSuccess />
+                  <Footer />
+                </div>
+              }
+            />
+            <Route
+              path="/payment-failed"
+              element={
+                <div>
+                  <Navber />
+                  <PaymentFailed />
                   <Footer />
                 </div>
               }

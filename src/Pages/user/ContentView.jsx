@@ -1,358 +1,354 @@
 import React, { useEffect, useState } from "react";
-import ReactPlayer from "react-player";
-import { FaArrowRight, FaArrowLeft } from "react-icons/fa";
+import { FaArrowRight, FaArrowLeft, FaPlay, FaFileAlt } from "react-icons/fa";
 import { IoSearchOutline } from "react-icons/io5";
 import { IoIosArrowDown, IoIosArrowUp } from "react-icons/io";
-import { HiDocumentText, HiOutlinePlay } from "react-icons/hi";
 import { useParams } from "react-router-dom";
 import axiosInstance from "../../components/axiosInstance";
 import Sidebar from "../../components/Sidebar";
 import { toast } from "react-toastify";
-import { ReactReader } from "react-reader";
 import YouTubePlayer from "./CustomYoutubePlayerPractice";
 import Quiz from "./Quiz";
+import ReactPlayer from "react-player";
+import { ReactReader } from "react-reader";
 
 const ContentView = () => {
   const { name } = useParams();
-  const [videoData, setVideoData] = useState([]);
-  const [Course, setCourse] = useState(null);
-  const [feedBackData, setFeedBack] = useState([]);
+  const [chapters, setChapters] = useState([]);
+  const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [Previewid, setPreviewId] = useState(null);
-  const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
+  const [expandedChapter, setExpandedChapter] = useState(null);
+  const [currentVideo, setCurrentVideo] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [courseCompleted, setCourseCompleted] = useState(false);
-  const [chapters, setChapters] = useState([]);
-  const [hasSingleChapter, setHasSingleChapter] = useState(false);
 
   useEffect(() => {
     const fetchCourse = async () => {
       setLoading(true);
       try {
-        const response = await axiosInstance.get("/courses/getAll");
-        const filter = response.data.find((data) => data.course_name === name);
+        // Fetch course details
+        const courseResponse = await axiosInstance.get("/courses/getAll");
+        const courseData = courseResponse.data.find(
+          (data) => data.course_name === name
+        );
 
-        if (!filter) {
-          console.warn("No course found for name:", name);
+        if (!courseData) {
+          toast.error("Course not found");
           setLoading(false);
           return;
         }
 
-        const videoResponse = await axiosInstance.get(
-          `/videos/getVideosByChapters?idChapters=${filter.idCourses}`
+        // Fetch chapters with videos
+        const chaptersResponse = await axiosInstance.post(
+          "/chapters/getVideosByChapters",
+          { idCourses: courseData.idCourses }
         );
 
-        // Group videos by chapters
-        const chaptersMap = {};
-        videoResponse.data.forEach((video) => {
-          if (!chaptersMap[video.idChapters]) {
-            chaptersMap[video.idChapters] = {
-              id: video.idChapters,
-              name: video.chapter_name || `Chapter ${video.idChapters}`,
-              videos: [],
-            };
+        setChapters(chaptersResponse.data);
+        setCourse(courseData);
+
+        // Auto-expand first chapter if exists
+        if (chaptersResponse.data.length > 0) {
+          setExpandedChapter(chaptersResponse.data[0].idChapters);
+          // Set first video as current if exists
+          if (chaptersResponse.data[0].Videos?.length > 0) {
+            setCurrentVideo(chaptersResponse.data[0].Videos[0]);
           }
-          chaptersMap[video.idChapters].videos.push(video);
-        });
-
-        const chaptersArray = Object.values(chaptersMap);
-        setChapters(chaptersArray);
-        setHasSingleChapter(chaptersArray.length === 1);
-
-        // If single chapter, set Previewid to that chapter's ID
-        if (chaptersArray.length === 1) {
-          setPreviewId(chaptersArray[0].id);
         }
-
-        setVideoData(videoResponse.data);
-        setCourse(filter);
       } catch (error) {
-        console.error("Error fetching course data:", error);
+        console.error("Error fetching data:", error);
+        toast.error("Failed to load course content");
       }
       setLoading(false);
     };
 
-    const fetchFeedback = async () => {
-      try {
-        const response = await axiosInstance.get("/feedbacks/getAll");
-        setFeedBack(response.data);
-      } catch (error) {
-        console.error("Error fetching feedback:", error);
-      }
-    };
-
     fetchCourse();
-    fetchFeedback();
   }, [name]);
 
-  const handlePreviewReply = (id) => {
-    if (Previewid === id) {
-      setPreviewId(null);
-    } else {
-      setPreviewId(id);
-    }
+  const toggleChapter = (chapterId) => {
+    setExpandedChapter((prev) => (prev === chapterId ? null : chapterId));
   };
 
-  const handleOpenVideo = (video) => {
+  const handleVideoSelect = (video) => {
     if (!video?.video_url) {
-      toast.warn("Video URL not found. Skipping this video.");
+      toast.warn("Video URL not found");
       return;
     }
-    const videoIndex = videoData.findIndex(
-      (v) => v.idVideos === video.idVideos
-    );
-    setCurrentVideoIndex(videoIndex === -1 ? 0 : videoIndex);
+    setCurrentVideo(video);
+    setCourseCompleted(false);
   };
 
-  const handleVideoChange = (direction) => {
+  const handleVideoNavigation = (direction) => {
+    if (!currentVideo) return;
+
+    // Find current chapter and video index
+    let currentChapterIndex = -1;
+    let currentVideoIndex = -1;
+
+    for (let i = 0; i < chapters.length; i++) {
+      const chapter = chapters[i];
+      const videoIndex = chapter.Videos?.findIndex(
+        (v) => v.idVideos === currentVideo.idVideos
+      );
+      if (videoIndex !== -1) {
+        currentChapterIndex = i;
+        currentVideoIndex = videoIndex;
+        break;
+      }
+    }
+
+    if (currentChapterIndex === -1 || currentVideoIndex === -1) return;
+
     if (direction === "next") {
-      if (currentVideoIndex === videoData.length - 1) {
-        setCourseCompleted(true);
-        setCurrentVideoIndex(null);
+      // Try next video in same chapter
+      if (
+        chapters[currentChapterIndex].Videos?.length >
+        currentVideoIndex + 1
+      ) {
+        setCurrentVideo(
+          chapters[currentChapterIndex].Videos[currentVideoIndex + 1]
+        );
         return;
       }
-      setCurrentVideoIndex((prevIndex) =>
-        Math.min(prevIndex + 1, videoData.length - 1)
-      );
+
+      // Try first video in next chapter
+      if (chapters.length > currentChapterIndex + 1) {
+        if (chapters[currentChapterIndex + 1].Videos?.length > 0) {
+          setCurrentVideo(chapters[currentChapterIndex + 1].Videos[0]);
+          setExpandedChapter(chapters[currentChapterIndex + 1].idChapters);
+          return;
+        }
+      }
+
+      // No more videos - course completed
+      setCourseCompleted(true);
+      setCurrentVideo(null);
     } else if (direction === "prev") {
-      if (currentVideoIndex === 0) return;
-      setCurrentVideoIndex((prevIndex) => Math.max(prevIndex - 1, 0));
+      // Try previous video in same chapter
+      if (currentVideoIndex > 0) {
+        setCurrentVideo(
+          chapters[currentChapterIndex].Videos[currentVideoIndex - 1]
+        );
+        return;
+      }
+
+      // Try last video in previous chapter
+      if (currentChapterIndex > 0) {
+        const prevChapter = chapters[currentChapterIndex - 1];
+        if (prevChapter.Videos?.length > 0) {
+          setCurrentVideo(prevChapter.Videos[prevChapter.Videos.length - 1]);
+          setExpandedChapter(prevChapter.idChapters);
+        }
+      }
     }
   };
 
-  const currentVideo = videoData[currentVideoIndex] || null;
-
-  const filteredVideos = videoData.filter((data) =>
-    data?.video_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredChapters = chapters
+    .map((chapter) => ({
+      ...chapter,
+      Videos: chapter.Videos?.filter((video) =>
+        video.video_name.toLowerCase().includes(searchTerm.toLowerCase())
+      ),
+    }))
+    .filter((chapter) => chapter.Videos?.length > 0 || searchTerm === "");
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <Sidebar>
+        <div className="flex justify-center items-center h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+      </Sidebar>
+    );
   }
 
   return (
     <Sidebar>
-      <div>
-        <main className="lg:min-h-[calc(100vh_-_347px)] relative">
-          <section className="bg-0">
-            <div className="md:px-4">
-              <section className="grid grid-cols-3 gap-8 lg:gap-8 ">
-                {/* Video Player Section */}
-                <div className="col-span-full w-full space-y-8 lg:col-span-2">
-                  <div className="z-10 flex aspect-video w-full flex-col justify-center gap-y-4">
-                    <div className="relative mb-5 h-full">
-                      <div className="flex h-full w-full items-center justify-center">
-                        <div className="aspect-video w-full">
-                          <div style={{ width: "100%", height: "100%" }}>
-                            {currentVideo ? (
-                              currentVideo.video_type === "mp4" ? (
-                                <YouTubePlayer
-                                  videoId={currentVideo.vdo_cipher_video_id}
-                                />
-                              ) : currentVideo.video_type === "quiz" ? (
-                                <div className="relative">
-                                  <Quiz quiz={currentVideo} />
+      <div className="bg-gray-50 min-h-screen">
+        <main className="container mx-auto px-4 py-8">
+          <div className="flex flex-col lg:flex-row gap-8">
+            {/* Video Player Section */}
+            <div className="w-full lg:w-2/3">
+              <div className="bg-white rounded-lg shadow-md overflow-hidden">
+                <div className="aspect-w-16 aspect-h-9 bg-black">
+                  {currentVideo ? (
+                    currentVideo.video_type === "mp4" ? (
+                      <YouTubePlayer
+                        videoId={currentVideo.vdo_cipher_video_id}
+                        className="w-full h-full"
+                      />
+                    ) : currentVideo.video_type === "quiz" ? (
+                      <div className="p-4">
+                        <Quiz quiz={currentVideo} />
+                      </div>
+                    ) : currentVideo.video_type === "pdf" ? (
+                      <div className="h-[600px]">
+                        <ReactReader
+                          url={currentVideo.video_url}
+                          title={currentVideo.video_name}
+                          showToc={true}
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <ReactPlayer
+                          url={currentVideo.video_url}
+                          controls={true}
+                          width="100%"
+                          height="100%"
+                        />
+                      </div>
+                    )
+                  ) : courseCompleted ? (
+                    <div className="flex flex-col items-center justify-center h-full p-8 text-center bg-gradient-to-br from-blue-50 to-green-50">
+                      <div className="text-6xl mb-4">🎉</div>
+                      <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                        Course Completed!
+                      </h2>
+                      <p className="text-gray-600">
+                        Congratulations on finishing the course. Keep up the
+                        great work!
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full p-8 text-center bg-gradient-to-br from-blue-50 to-pink-50">
+                      <div className="text-6xl mb-4">📚</div>
+                      <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                        Select a Lesson to Begin
+                      </h2>
+                      <p className="text-gray-600">
+                        Choose a video from the sidebar to start learning.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-4 border-t">
+                  <h3 className="text-xl font-semibold text-gray-800">
+                    {currentVideo?.video_name || "No video selected"}
+                  </h3>
+                  <div className="flex justify-between mt-4">
+                    <button
+                      onClick={() => handleVideoNavigation("prev")}
+                      disabled={!currentVideo}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-md ${
+                        currentVideo
+                          ? "bg-blue-600 text-white hover:bg-blue-700"
+                          : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      }`}
+                    >
+                      <FaArrowLeft />
+                      <span>Previous</span>
+                    </button>
+                    <button
+                      onClick={() => handleVideoNavigation("next")}
+                      disabled={courseCompleted}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-md ${
+                        !courseCompleted
+                          ? "bg-blue-600 text-white hover:bg-blue-700"
+                          : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      }`}
+                    >
+                      <span>
+                        {courseCompleted ? "Course Completed" : "Next"}
+                      </span>
+                      <FaArrowRight />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Chapter List Section */}
+            <div className="w-full lg:w-1/3">
+              <div className="bg-white rounded-lg shadow-md overflow-hidden">
+                <div className="p-4 border-b">
+                  <h2 className="text-lg font-semibold text-gray-800">
+                    {course?.course_name || "Course Content"}
+                  </h2>
+                  <div className="mt-2 relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <IoSearchOutline className="text-gray-400" />
+                    </div>
+                    <input
+                      type="text"
+                      className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      placeholder="Search lessons..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div
+                  className="overflow-y-auto"
+                  style={{ maxHeight: "calc(100vh - 200px)" }}
+                >
+                  {filteredChapters.length > 0 ? (
+                    filteredChapters.map((chapter) => (
+                      <div key={chapter.idChapters} className="border-b">
+                        <div
+                          className="flex justify-between items-center p-4 cursor-pointer hover:bg-gray-50"
+                          onClick={() => toggleChapter(chapter.idChapters)}
+                        >
+                          <h3 className="font-medium text-gray-800">
+                            {chapter.name}
+                          </h3>
+                          {expandedChapter === chapter.idChapters ? (
+                            <IoIosArrowUp className="text-gray-500" />
+                          ) : (
+                            <IoIosArrowDown className="text-gray-500" />
+                          )}
+                        </div>
+
+                        {expandedChapter === chapter.idChapters && (
+                          <div className="pb-2">
+                            {chapter.Videos?.length > 0 ? (
+                              chapter.Videos.map((video) => (
+                                <div
+                                  key={video.idVideos}
+                                  className={`flex items-center px-4 py-3 mx-2 rounded-md cursor-pointer ${
+                                    currentVideo?.idVideos === video.idVideos
+                                      ? "bg-blue-100"
+                                      : "hover:bg-gray-100"
+                                  }`}
+                                  onClick={() => handleVideoSelect(video)}
+                                >
+                                  <div className="flex-shrink-0 mr-3">
+                                    {video.video_type === "mp4" ? (
+                                      <FaPlay className="text-blue-500" />
+                                    ) : (
+                                      <FaFileAlt className="text-green-500" />
+                                    )}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-800 truncate">
+                                      {video.video_name}
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                      {video.duration} min •{" "}
+                                      {video.video_type.toUpperCase()}
+                                    </p>
+                                  </div>
                                 </div>
-                              ) : (
-                                <ReactReader
-                                  url={currentVideo?.video_url}
-                                  title="PDF Reader"
-                                  showToc={true}
-                                  styles={{
-                                    readerArea: { height: "760px" },
-                                  }}
-                                />
-                              )
-                            ) : courseCompleted ? (
-                              <div className="text-center p-5">
-                                <h2 className="text-xl font-bold">
-                                  🎉 Thank you for completing the course! 🎉
-                                </h2>
-                                <p className="text-gray-600">
-                                  We hope you enjoyed the journey. Keep
-                                  learning!
-                                </p>
-                              </div>
+                              ))
                             ) : (
-                              <div className="text-center font-bold text-3xl text-red-500">
-                                Sorry there is no video yet. Until next time 😭
-                                😭 😭
+                              <div className="px-4 py-3 text-sm text-gray-500">
+                                No lessons available in this chapter.
                               </div>
                             )}
                           </div>
-                        </div>
+                        )}
                       </div>
+                    ))
+                  ) : (
+                    <div className="p-4 text-center text-gray-500">
+                      No chapters found matching your search.
                     </div>
-                    <div className="font-semibold text-xl md:mt-44 lg:mt-0">
-                      {currentVideo?.video_name}
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <button
-                        onClick={() => handleVideoChange("prev")}
-                        className="bg-coching-button_color flex text-[12px] items-center justify-center gap-2 p-[10px] rounded-[32px]"
-                      >
-                        <FaArrowLeft color="white" />
-                        <span className="text-white">Prev Lesson</span>
-                      </button>
-                      <button
-                        onClick={() => handleVideoChange("next")}
-                        className="bg-coching-button_color text-[12px] flex items-center justify-center gap-2 p-[10px] rounded-[32px]"
-                        disabled={courseCompleted}
-                      >
-                        <span className="text-white">
-                          {courseCompleted ? "Course Completed" : "Next Lesson"}
-                        </span>
-                        <FaArrowRight color="white" />
-                      </button>
-                    </div>
-                  </div>
+                  )}
                 </div>
-
-                {/* Video List Section */}
-                <div className="bg-[#F8FAFC] border-gray-50 border-light-1 shadow-1 col-span-full h-max rounded-md border pb-1 lg:col-span-1 lg:rounded-lg">
-                  <div className="rounded-t-md p-3 dark:bg-slate-900 lg:rounded-t-lg">
-                    <div className="flex items-center justify-center">
-                      <div className="w-full">
-                        <div className="bg-[#F8FAFC] border rounded-md p-1 text-black flex items-center pl-2">
-                          <IoSearchOutline color="black" size={20} />
-                          <input
-                            type="text"
-                            className="bg-[#F8FAFC] text-black"
-                            placeholder="search content"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flow-root px-4 py-2 bg-white border-t">
-                    <div className="mantine-ScrollArea-root h-max lg:h-[calc(100vh_-_250px)]">
-                      {hasSingleChapter
-                        ? // Show all videos directly when there's only one chapter
-                          chapters[0]?.videos.map((video) => (
-                            <div
-                              key={video.idVideos}
-                              className="lg:w-full border-b"
-                            >
-                              <div className="text-[#504f4f] flex items-start gap-2 lg:gap-4 p-2 cursor-pointer hover:bg-slate-100">
-                                <div>
-                                  {video.video_type === "mp4" ? (
-                                    <HiOutlinePlay
-                                      color="rgb(2 132 199)"
-                                      size={27}
-                                    />
-                                  ) : (
-                                    <HiDocumentText
-                                      color="rgb(2 132 199)"
-                                      size={27}
-                                    />
-                                  )}
-                                </div>
-                                <div className="lg:w-10/12 w-full">
-                                  {video.video_type === "mp4" ? (
-                                    <button
-                                      className="text-[14px] lg:text-[14px] text-left"
-                                      onClick={() => handleOpenVideo(video)}
-                                    >
-                                      {video.video_name}
-                                    </button>
-                                  ) : (
-                                    <a
-                                      href={video.video_url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-[14px] lg:text-[14px] underline text-blue-500"
-                                    >
-                                      {video.video_name} (Download / View)
-                                    </a>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          ))
-                        : // Show chapters with expandable videos when multiple chapters exist
-                          chapters.map((chapter) => (
-                            <div
-                              key={chapter.id}
-                              className="lg:w-full border-b"
-                            >
-                              <div
-                                className="text-[#504f4f] flex transition pt-3 hover:bg-[#31972a] hover:text-white lg:pt-4 lg:pl-2 pr-3 pb-4 justify-start cursor-pointer gap-5"
-                                onClick={() => handlePreviewReply(chapter.id)}
-                              >
-                                <div className="lg:ml-0 ml-2 text-[#94A3bb]">
-                                  {Previewid === chapter.id ? (
-                                    <IoIosArrowUp size={18} />
-                                  ) : (
-                                    <IoIosArrowDown size={18} />
-                                  )}
-                                </div>
-                                <div className="flex flex-col items-start">
-                                  <div>
-                                    <h3 className="text-xs lg:text-sm">
-                                      {chapter.name}
-                                    </h3>
-                                  </div>
-                                </div>
-                              </div>
-                              {Previewid === chapter.id && (
-                                <div className="text-slate-400">
-                                  <ul className="p-1">
-                                    {chapter.videos.map((video) => (
-                                      <li
-                                        key={video.idVideos}
-                                        className="text-[#504f4f] flex items-start gap-2 lg:gap-4 p-2 pl-7 cursor-pointer px-2 py-2 hover:bg-slate-100"
-                                      >
-                                        <div>
-                                          {video.video_type === "mp4" ? (
-                                            <HiOutlinePlay
-                                              color="rgb(2 132 199)"
-                                              size={27}
-                                            />
-                                          ) : (
-                                            <HiDocumentText
-                                              color="rgb(2 132 199)"
-                                              size={27}
-                                            />
-                                          )}
-                                        </div>
-                                        <div className="lg:w-10/12 w-full">
-                                          {video.video_type === "mp4" ? (
-                                            <button
-                                              className="text-[14px] lg:text-[14px]"
-                                              onClick={() =>
-                                                handleOpenVideo(video)
-                                              }
-                                            >
-                                              {video.video_name}
-                                            </button>
-                                          ) : (
-                                            <a
-                                              href={video.video_url}
-                                              target="_blank"
-                                              rel="noopener noreferrer"
-                                              className="text-[14px] lg:text-[14px] underline text-blue-500"
-                                            >
-                                              {video.video_name} (Download /
-                                              View)
-                                            </a>
-                                          )}
-                                        </div>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                    </div>
-                  </div>
-                </div>
-              </section>
+              </div>
             </div>
-          </section>
+          </div>
         </main>
       </div>
     </Sidebar>

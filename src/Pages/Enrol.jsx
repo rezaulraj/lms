@@ -67,15 +67,24 @@ function Enroll() {
     };
 
     try {
-      const response = await axiosInstance.post(
-        `/transaction/postTransactionFromAnyPage`,
-        saveData
-      );
-      if (response.status === 200) {
-        toast.success("Thank you for buying this course!");
-      } else {
-        toast.warn("An error occurred while saving the course.");
-      }
+      await fetch(
+        "http://194.233.87.22:" +
+          import.meta.env.VITE_BACKEND_PORT +
+          "api/transaction/postTransactionFromAnyPage",
+        {
+          method: "POST",
+          headers: {
+            "Content-type": "application/json",
+          },
+
+          body: JSON.stringify(saveData),
+        }
+      )
+        .then((res) => res.json)
+        .then((result) => {
+          window.location.replace(result.url);
+          console.lg(result);
+        });
     } catch (error) {
       console.log(error);
     }

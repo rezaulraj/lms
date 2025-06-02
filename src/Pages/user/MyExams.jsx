@@ -175,6 +175,11 @@ const MyExams = () => {
           ))}
         </div>
 
+        <div className=" mt-10">
+          <h1 className="text-2xl md:text-4xl text-lmsfontend-forth_color font-bold my-4 text-center border-b border-t">
+            Exam Feedback
+          </h1>   
+        </div>
         {selectedExam && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white w-11/12 md:w-2/3 lg:w-1/2 p-6 rounded-lg shadow-lg relative max-h-[90vh] overflow-y-auto">

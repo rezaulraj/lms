@@ -7,6 +7,7 @@ import axiosInstance from "../components/axiosInstance";
 import { useTheme } from "../components/ThemeContext";
 import RatingStars from "../components/RatingStars";
 import LoadingCard from "../components/LoadingCard";
+import { Helmet } from "react-helmet";
 const Course = () => {
   const navigate = useNavigate();
   const [Subject, setSubject] = useState([]);
@@ -160,9 +161,16 @@ const Course = () => {
       setLoading(false);
     }, 1000);
   };
-  console.log("courses", course);
+  console.log("courses", course); 
   return (
     <div className="container  md:px-0 m-auto pt-20 pb-4">
+      <Helmet>
+        <title>English course</title>
+        <meta
+          name="keywords"
+          content="English for Beginner, English Course, English hsc, hsc english"
+        />
+      </Helmet>
       <div
         className={`flex items-center mt-3 justify-center border-b flex-col gap-2 ${
           theme === "light" ? "border-gray-200" : "border-gray-500"

@@ -163,7 +163,7 @@ const Navber = () => {
         <div className="flex items-start">
           <Link onClick={handleFalse} to={"/"}>
             <img
-              className="h-[50px] w-[150px] object-cover cursor-pointer"
+              className="w-[150px] object-cover cursor-pointer"
               src="./mainlogo.png"
               alt="Logo"
             />
