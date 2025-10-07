@@ -59,7 +59,7 @@ const SignUp = () => {
     setIsLoading(true);
     try {
       await fetch(
-        "http://194.233.87.22:" +
+        "https://backendoflms.crowningenglish.com:" +
           import.meta.env.VITE_BACKEND_PORT +
           "/api/auth/otp",
         {
@@ -148,7 +148,7 @@ const SignUp = () => {
 
     try {
       await fetch(
-        "http://194.233.87.22:" +
+        "https://backendoflms.crowningenglish.com:" +
           import.meta.env.VITE_BACKEND_PORT +
           "/api/auth/signup_fromNodeJWT",
         {
@@ -180,7 +180,6 @@ const SignUp = () => {
             console.log();
           }
         }
-
       });
       setIsLoading(false);
 
@@ -215,7 +214,7 @@ const SignUp = () => {
             setIsLoading(true);
 
             await fetch(
-              "http://194.233.87.22:" +
+              "https://backendoflms.crowningenglish.com:" +
                 import.meta.env.VITE_BACKEND_PORT +
                 "/api/auth/signup_fromGoogle",
               {

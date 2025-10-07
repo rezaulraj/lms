@@ -1,5 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { FaArrowRight, FaArrowLeft, FaPlay, FaFileAlt } from "react-icons/fa";
+import {
+  FaArrowRight,
+  FaArrowLeft,
+  FaPlay,
+  FaFileAlt,
+  FaDownload,
+  FaEye,
+  FaExternalLinkAlt,
+} from "react-icons/fa";
 import { IoSearchOutline } from "react-icons/io5";
 import { IoIosArrowDown, IoIosArrowUp } from "react-icons/io";
 import { useParams } from "react-router-dom";
@@ -20,12 +28,13 @@ const ContentView = () => {
   const [currentVideo, setCurrentVideo] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [courseCompleted, setCourseCompleted] = useState(false);
+  const [selectedSheet, setSelectedSheet] = useState(null);
+  const [showSheetModal, setShowSheetModal] = useState(false);
 
   useEffect(() => {
     const fetchCourse = async () => {
       setLoading(true);
       try {
-        // Fetch course details
         const courseResponse = await axiosInstance.get("/courses/getAll");
         const courseData = courseResponse.data.find(
           (data) => data.course_name === name
@@ -37,7 +46,6 @@ const ContentView = () => {
           return;
         }
 
-        // Fetch chapters with videos
         const chaptersResponse = await axiosInstance.post(
           "/chapters/getVideosByChapters",
           { idCourses: courseData.idCourses }
@@ -45,11 +53,8 @@ const ContentView = () => {
 
         setChapters(chaptersResponse.data);
         setCourse(courseData);
-
-        // Auto-expand first chapter if exists
         if (chaptersResponse.data.length > 0) {
           setExpandedChapter(chaptersResponse.data[0].idChapters);
-          // Set first video as current if exists
           if (chaptersResponse.data[0].Videos?.length > 0) {
             setCurrentVideo(chaptersResponse.data[0].Videos[0]);
           }
@@ -63,6 +68,50 @@ const ContentView = () => {
 
     fetchCourse();
   }, [name]);
+
+  // Convert Google Drive download link to preview link
+  const getPreviewUrl = (driveUrl) => {
+    if (!driveUrl) return null;
+
+    const match =
+      driveUrl.match(/[&?]id=([^&]+)/) || driveUrl.match(/\/d\/([^\/]+)/);
+    if (match && match[1]) {
+      return `https://drive.google.com/file/d/${match[1]}/preview`;
+    }
+
+    return driveUrl;
+  };
+
+  // Get direct download URL for Google Drive
+  const getDownloadUrl = (driveUrl) => {
+    if (!driveUrl) return null;
+
+    const match =
+      driveUrl.match(/[&?]id=([^&]+)/) || driveUrl.match(/\/d\/([^\/]+)/);
+    if (match && match[1]) {
+      return `https://drive.google.com/uc?export=download&id=${match[1]}`;
+    }
+
+    return driveUrl;
+  };
+
+  // Check if URL is from Google Drive
+  const isGoogleDriveUrl = (url) => {
+    return url && url.includes("drive.google.com");
+  };
+
+  // Check if URL is from a supported third-party service
+  const isSupportedPreview = (url) => {
+    if (!url) return false;
+
+    const supportedDomains = [
+      "drive.google.com",
+      "docs.google.com",
+      "view.officeapps.live.com", // Microsoft Office Online
+    ];
+
+    return supportedDomains.some((domain) => url.includes(domain));
+  };
 
   const toggleChapter = (chapterId) => {
     setExpandedChapter((prev) => (prev === chapterId ? null : chapterId));
@@ -80,7 +129,6 @@ const ContentView = () => {
   const handleVideoNavigation = (direction) => {
     if (!currentVideo) return;
 
-    // Find current chapter and video index
     let currentChapterIndex = -1;
     let currentVideoIndex = -1;
 
@@ -99,7 +147,6 @@ const ContentView = () => {
     if (currentChapterIndex === -1 || currentVideoIndex === -1) return;
 
     if (direction === "next") {
-      // Try next video in same chapter
       if (
         chapters[currentChapterIndex].Videos?.length >
         currentVideoIndex + 1
@@ -110,7 +157,6 @@ const ContentView = () => {
         return;
       }
 
-      // Try first video in next chapter
       if (chapters.length > currentChapterIndex + 1) {
         if (chapters[currentChapterIndex + 1].Videos?.length > 0) {
           setCurrentVideo(chapters[currentChapterIndex + 1].Videos[0]);
@@ -119,11 +165,9 @@ const ContentView = () => {
         }
       }
 
-      // No more videos - course completed
       setCourseCompleted(true);
       setCurrentVideo(null);
     } else if (direction === "prev") {
-      // Try previous video in same chapter
       if (currentVideoIndex > 0) {
         setCurrentVideo(
           chapters[currentChapterIndex].Videos[currentVideoIndex - 1]
@@ -131,7 +175,6 @@ const ContentView = () => {
         return;
       }
 
-      // Try last video in previous chapter
       if (currentChapterIndex > 0) {
         const prevChapter = chapters[currentChapterIndex - 1];
         if (prevChapter.Videos?.length > 0) {
@@ -142,6 +185,55 @@ const ContentView = () => {
     }
   };
 
+  const handleDownload = (sheetUrl, sheetName) => {
+    if (!sheetUrl) {
+      toast.error("Download link not available");
+      return;
+    }
+
+    const downloadUrl = isGoogleDriveUrl(sheetUrl)
+      ? getDownloadUrl(sheetUrl)
+      : sheetUrl;
+
+    // Create a temporary link for download
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = sheetName || "document.pdf";
+    link.target = "_blank";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("Download started");
+  };
+
+  const handlePreview = (sheetUrl, sheetType, sheetName) => {
+    if (!sheetUrl) {
+      toast.error("Preview not available");
+      return;
+    }
+
+    const previewUrl = getPreviewUrl(sheetUrl);
+
+    if (isSupportedPreview(previewUrl)) {
+      setSelectedSheet({
+        url: previewUrl,
+        type: sheetType,
+        name: sheetName,
+        originalUrl: sheetUrl,
+      });
+      setShowSheetModal(true);
+    } else {
+      // For unsupported services, open in new tab
+      window.open(previewUrl, "_blank");
+      toast.info("Opening document in new tab");
+    }
+  };
+
+  const closeModal = () => {
+    setShowSheetModal(false);
+    setSelectedSheet(null);
+  };
+
   const filteredChapters = chapters
     .map((chapter) => ({
       ...chapter,
@@ -150,6 +242,86 @@ const ContentView = () => {
       ),
     }))
     .filter((chapter) => chapter.Videos?.length > 0 || searchTerm === "");
+
+  // Sheet Preview Modal Component
+  const SheetPreviewModal = ({ sheet, onClose }) => {
+    if (!sheet) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[95vh] overflow-hidden">
+          <div className="flex justify-between items-center p-4 border-b">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800">
+                {sheet.name ||
+                  `Preview - ${
+                    sheet.type.charAt(0).toUpperCase() + sheet.type.slice(1)
+                  } Sheet`}
+              </h3>
+              <p className="text-sm text-gray-600">
+                {isGoogleDriveUrl(sheet.url)
+                  ? "Google Drive Preview"
+                  : "Document Preview"}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <a
+                href={sheet.originalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-3 py-2 text-blue-600 hover:text-blue-800"
+                title="Open in new tab"
+              >
+                <FaExternalLinkAlt />
+              </a>
+              <button
+                onClick={() => handleDownload(sheet.originalUrl, sheet.name)}
+                className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                title="Download"
+              >
+                <FaDownload />
+              </button>
+              <button
+                onClick={onClose}
+                className="text-gray-500 hover:text-gray-700 text-2xl ml-2"
+                title="Close"
+              >
+                &times;
+              </button>
+            </div>
+          </div>
+          <div className="p-4 h-full">
+            <div className="h-[80vh] bg-gray-100 rounded-lg overflow-hidden">
+              {isGoogleDriveUrl(sheet.url) ? (
+                <iframe
+                  src={sheet.url}
+                  title="Document Preview"
+                  className="w-full h-full border-0"
+                  allow="autoplay"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full">
+                  <FaExternalLinkAlt className="text-4xl text-gray-400 mb-4" />
+                  <p className="text-gray-600 mb-4">
+                    This document cannot be previewed inline
+                  </p>
+                  <a
+                    href={sheet.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  >
+                    <FaExternalLinkAlt />
+                    Open in New Tab
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   if (loading) {
     return (
@@ -164,7 +336,7 @@ const ContentView = () => {
   return (
     <Sidebar>
       <div className="bg-gray-50 min-h-screen">
-        <main className="container mx-auto px-4 py-8">
+        <main className="max-w-screen-2xl mx-auto px-2 py-8">
           <div className="flex flex-col lg:flex-row gap-8">
             {/* Video Player Section */}
             <div className="w-full lg:w-2/3">
@@ -255,13 +427,171 @@ const ContentView = () => {
                     </button>
                   </div>
                 </div>
+
+                {/* Sheets Section */}
+                {currentVideo && (
+                  <div className="p-6 border-t bg-gray-50">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                      Learning Materials
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {/* Lecture Sheet */}
+                      {currentVideo.LectureSheet?.sheet_url && (
+                        <div className="bg-white rounded-lg shadow-sm border p-4 hover:shadow-md transition-shadow">
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className="p-2 bg-blue-100 rounded-lg">
+                              <FaFileAlt className="text-blue-600 text-xl" />
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-gray-800">
+                                Lecture Sheet
+                              </h4>
+                              <p className="text-sm text-gray-600">
+                                Study material
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() =>
+                                handlePreview(
+                                  currentVideo.LectureSheet.sheet_url,
+                                  "lecture",
+                                  `Lecture_Sheet_${currentVideo.video_name}`
+                                )
+                              }
+                              className="flex-1 flex items-center justify-center gap-2 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors"
+                            >
+                              <FaEye />
+                              Preview
+                            </button>
+                            <button
+                              onClick={() =>
+                                handleDownload(
+                                  currentVideo.LectureSheet.sheet_url,
+                                  `Lecture_Sheet_${currentVideo.video_name}`
+                                )
+                              }
+                              className="flex-1 flex items-center justify-center gap-2 py-2 bg-green-50 text-green-600 rounded-md hover:bg-green-100 transition-colors"
+                            >
+                              <FaDownload />
+                              Download
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Solution Sheet */}
+                      {currentVideo.SolutionSheet?.sheet_url && (
+                        <div className="bg-white rounded-lg shadow-sm border p-4 hover:shadow-md transition-shadow">
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className="p-2 bg-green-100 rounded-lg">
+                              <FaFileAlt className="text-green-600 text-xl" />
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-gray-800">
+                                Solution Sheet
+                              </h4>
+                              <p className="text-sm text-gray-600">
+                                Answer key
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() =>
+                                handlePreview(
+                                  currentVideo.SolutionSheet.sheet_url,
+                                  "solution",
+                                  `Solution_Sheet_${currentVideo.video_name}`
+                                )
+                              }
+                              className="flex-1 flex items-center justify-center gap-2 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors"
+                            >
+                              <FaEye />
+                              Preview
+                            </button>
+                            <button
+                              onClick={() =>
+                                handleDownload(
+                                  currentVideo.SolutionSheet.sheet_url,
+                                  `Solution_Sheet_${currentVideo.video_name}`
+                                )
+                              }
+                              className="flex-1 flex items-center justify-center gap-2 py-2 bg-green-50 text-green-600 rounded-md hover:bg-green-100 transition-colors"
+                            >
+                              <FaDownload />
+                              Download
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Practice Sheet */}
+                      {currentVideo.PracticeSheet?.sheet_url && (
+                        <div className="bg-white rounded-lg shadow-sm border p-4 hover:shadow-md transition-shadow">
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className="p-2 bg-purple-100 rounded-lg">
+                              <FaFileAlt className="text-purple-600 text-xl" />
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-gray-800">
+                                Practice Sheet
+                              </h4>
+                              <p className="text-sm text-gray-600">Exercises</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() =>
+                                handlePreview(
+                                  currentVideo.PracticeSheet.sheet_url,
+                                  "practice",
+                                  `Practice_Sheet_${currentVideo.video_name}`
+                                )
+                              }
+                              className="flex-1 flex items-center justify-center gap-2 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors"
+                            >
+                              <FaEye />
+                              Preview
+                            </button>
+                            <button
+                              onClick={() =>
+                                handleDownload(
+                                  currentVideo.PracticeSheet.sheet_url,
+                                  `Practice_Sheet_${currentVideo.video_name}`
+                                )
+                              }
+                              className="flex-1 flex items-center justify-center gap-2 py-2 bg-green-50 text-green-600 rounded-md hover:bg-green-100 transition-colors"
+                            >
+                              <FaDownload />
+                              Download
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* No sheets available message */}
+                    {!currentVideo.LectureSheet?.sheet_url &&
+                      !currentVideo.SolutionSheet?.sheet_url &&
+                      !currentVideo.PracticeSheet?.sheet_url && (
+                        <div className="text-center py-8 text-gray-500">
+                          <FaFileAlt className="text-4xl mx-auto mb-3 text-gray-300" />
+                          <p>
+                            No learning materials available for this lesson.
+                          </p>
+                        </div>
+                      )}
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Chapter List Section */}
             <div className="w-full lg:w-1/3">
               <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                <div className="p-4 border-b">
+                <div className="p-2 border-b">
                   <h2 className="text-lg font-semibold text-gray-800">
                     {course?.course_name || "Course Content"}
                   </h2>
@@ -350,6 +680,10 @@ const ContentView = () => {
             </div>
           </div>
         </main>
+
+        {showSheetModal && (
+          <SheetPreviewModal sheet={selectedSheet} onClose={closeModal} />
+        )}
       </div>
     </Sidebar>
   );

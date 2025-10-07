@@ -206,7 +206,7 @@ const YouTubePlayer = ({ videoId }) => {
           ? "100vw"
           : window.innerWidth < 768
           ? "100vw"
-          : "50vw",
+          : "55vw",
         height: isFullscreen
           ? "100vh"
           : window.innerWidth < 768

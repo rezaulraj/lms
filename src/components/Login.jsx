@@ -46,7 +46,7 @@ const Login = () => {
     setIsLoading(true);
     try {
       await fetch(
-        "http://194.233.87.22:" +
+        "https://backendoflms.crowningenglish.com:" +
           import.meta.env.VITE_BACKEND_PORT +
           "/api/auth/signin_fromNodeJWT",
         {
@@ -123,7 +123,7 @@ const Login = () => {
             setIsLoading(true);
 
             await fetch(
-              "http://194.233.87.22:" +
+              "https://backendoflms.crowningenglish.com:" +
                 import.meta.env.VITE_BACKEND_PORT +
                 "/api/auth/signin_fromGoogle",
               {

@@ -68,9 +68,9 @@ function Enroll() {
 
     try {
       await fetch(
-        "http://194.233.87.22:" +
+        "https://backendoflms.crowningenglish.com:" +
           import.meta.env.VITE_BACKEND_PORT +
-          "api/transaction/postTransactionFromAnyPage",
+          "/api/transaction/postTransactionFromAnyPage",
         {
           method: "POST",
           headers: {
