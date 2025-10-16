@@ -20,7 +20,10 @@ const EnrollCourse = () => {
         const response = await axiosInstance.get(
           `/transaction/getTransactionByUserId?idUsers=${userid}`
         );
-        const responseData = response.data;
+        const responseData = response.data
+          .filter((transaction) => transaction.idCourses !== 66)
+          .map((transaction) => transaction);
+        console.log("course find", responseData);
         setCourse(responseData);
         setLoading(false);
       } catch (error) {

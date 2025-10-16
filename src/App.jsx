@@ -51,6 +51,8 @@ import MyBooks from "./Pages/user/MyBooks";
 import PaymentSuccess from "./Pages/PaymentSuccess";
 import PaymentFailed from "./Pages/PaymentFailed";
 import ImageToPdfGenarate from "./Pages/user/ImageToPdfGenarate";
+import Exams from "./Pages/Exams";
+import ExamEnrollment from "./Pages/ExamDetalis";
 
 function App() {
   return (
@@ -85,6 +87,17 @@ function App() {
             {/* Quiz */}
 
             <Route
+              path="/exam-center"
+              element={
+                <div>
+                  <Navber />
+                  <Exams />
+                  <SupportButton />
+                  <Footer />
+                </div>
+              }
+            />
+            <Route
               path="/quiz"
               element={
                 <div>
@@ -101,6 +114,17 @@ function App() {
                 <div>
                   <Navber />
                   <Enrollment />
+                  <SupportButton />
+                  <Footer />
+                </div>
+              }
+            />
+            <Route
+              path="/exam-details/:name"
+              element={
+                <div>
+                  <Navber />
+                  <ExamEnrollment />
                   <SupportButton />
                   <Footer />
                 </div>

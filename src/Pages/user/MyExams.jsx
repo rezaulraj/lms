@@ -134,7 +134,7 @@ const MyExams = () => {
         (course) => course.idCourses
       );
       const filtered = examData.filter((exam) =>
-        enrolledCourseIds.includes(exam.idCourses)
+        enrolledCourseIds.includes(exam.Courses[0].idCourses)
       );
       setFilteredExams(filtered);
     } else {

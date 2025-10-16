@@ -11,9 +11,9 @@ import { IoIosArrowDown } from "react-icons/io";
 import { IoIosArrowUp } from "react-icons/io";
 import content from "../assets/content.svg";
 import { useState, useEffect, useRef } from "react";
-import { MdOutlineOndemandVideo } from "react-icons/md";
+
 import { Modal } from "antd";
-import { CgLock } from "react-icons/cg";
+
 import "@dotlottie/player-component";
 import { useNavigate, useParams } from "react-router-dom";
 import axiosInstance from "../components/axiosInstance";
@@ -37,7 +37,7 @@ const imageStyle = {
   maxHeight: "100%",
   objectFit: "cover",
 };
-function Enrollment() {
+function ExamEnrollment() {
   const [visible, setVisible] = useState(false);
   const [visibleButton, setvisibleButton] = useState(false);
   const [Openvisible, setOpenVisible] = useState(false);
@@ -50,7 +50,7 @@ function Enrollment() {
   const [feedBackData, setFeedBack] = useState([]);
   const [loading, setLoading] = useState(false);
   const containerRef = useRef(null);
-  const [iframeKey, setIframeKey] = useState(0); // Add a state for iframe key
+  const [iframeKey, setIframeKey] = useState(0);
 
   const [Previewid, setPreviewId] = useState(null);
   const [id, setId] = useState(null);
@@ -83,29 +83,9 @@ function Enrollment() {
     }
   };
   const [modal1Open, setModal1Open] = useState(false);
-  const [source, setSource] = useState("");
   const [videoId, setVideoId] = useState("");
   const [otp, setOtp] = useState("");
   const [playbackInfo, setPlaybackInfo] = useState("");
-
-  const handleOpen = async (item) => {
-    setModal1Open(true);
-    // setVideoId(item.video_url);
-
-    try {
-      const response = await axiosInstance.post(
-        "/videos/getOtpFromVideoCipher",
-        {
-          videoId: item.video_url,
-        }
-      );
-      setOtp(response.data.otp);
-      setPlaybackInfo(response.data.playbackInfo);
-      console.log(response.data);
-    } catch (error) {
-      console.error("Error fetching video data", error);
-    }
-  };
 
   const handlecancel = () => {
     setModal1Open(false);
@@ -208,11 +188,10 @@ function Enrollment() {
       setFeedBack(filter);
       console.log(filter);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [Course]);
 
-  console.log("course name", name);
-
+  console.log("course name", Course);
+  console.log("name", name);
   useEffect(() => {
     const fetchEnroleCourse = async () => {
       try {
@@ -223,7 +202,6 @@ function Enrollment() {
         const responseData = response.data;
         setUserCourse(responseData);
         console.log("userdata in here", responseData);
-        // setLoading(false);
       } catch (error) {
         console.error("Error fetching enrole courses:", error);
       }
@@ -236,25 +214,35 @@ function Enrollment() {
 
   const handleNavigate = () => {
     const currentCourseId = Number(localStorage.getItem("idCourse"));
+    const currentExamId = Number(localStorage.getItem("idExams"));
 
-    // Check if the user is already enrolled in the current course
     const isUserEnrolled = userCourse?.some(
       (course) => course?.idCourses === currentCourseId
     );
+
+    const isUserExamEnrolled = userCourse?.some(
+      (course) => course?.idExams === currentExamId
+    );
+
     console.log("isUserEnrolled", isUserEnrolled);
+    console.log("isUserExamEnrolled", isUserExamEnrolled);
+    console.log("currentCourseId", currentCourseId);
+    console.log("currentExamId", currentExamId);
 
     if (useremail && username) {
-      if (isUserEnrolled) {
-        navigate("/user/my-courses"); 
-        
+      if (currentCourseId === 66 && isUserExamEnrolled) {
+        navigate("/user/my-exams");
+      } else if (isUserEnrolled && currentCourseId !== 66) {
+        navigate("/user/my-courses");
+      } else if (isUserExamEnrolled) {
+        navigate("/user/my-exams");
       } else {
-        navigate("/enroll"); 
+        navigate("/enroll");
       }
     } else {
       navigate("/login");
     }
   };
-
   return (
     <>
       <div
@@ -385,116 +373,6 @@ function Enrollment() {
               101 sections • 636 lectures • 58h 19m total length
             </p>
           </div>
-          {/* <div
-            className={`${
-              theme === "light"
-                ? "text-black bg-slate-50"
-                : "bg-slate-950 text-slate-300"
-            } shadow-1 border-general relative mx-auto divide-y border lg:p-8 xl:max-w-4xl`}
-          >
-            <div className="relative flex h-full w-full items-center justify-center">
-              <div
-                className="mantine-ScrollArea-root w-full mantine-jghxib"
-                style={{
-                  position: "relative",
-                  "--radix-scroll-area-corner-width": "10px",
-                  "--radix-scroll-area-corner-height": "10px",
-                  height: "400px",
-                }}
-              >
-                {videoData.map((data) => (
-                  <div
-                    key={data.idChapters}
-                    className={`${
-                      theme === "light"
-                        ? "border-neutral-300"
-                        : "border-neutral-700"
-                    } lg:w-full border-b `}
-                  >
-                    <div
-                      className="flex transition pt-3 hover:bg-[#31972a] hover:text-white duration-300 ease-in-out lg:pt-4 lg:pl-2 pr-3 pb-4 justify-between cursor-pointer gap-5 lg:items-center"
-                      onClick={() => handlePreviewReply(data.idChapters)}
-                      style={{
-                        backgroundColor:
-                          Openvisible && Previewid === data.idChapters
-                            ? " #31972a"
-                            : "",
-                        color:
-                          Openvisible && Previewid === data.idChapters
-                            ? "white"
-                            : "",
-                      }}
-                    >
-                      <div className={`" lg:ml-0 ml-2`}>
-                        {Openvisible && Previewid === data.idChapters ? (
-                          <IoIosArrowUp size={20} />
-                        ) : (
-                          <IoIosArrowDown size={20} />
-                        )}
-                      </div>
-                      <h3 className=" mantine-hgwlez text-xs lg:text-base ">
-                        {data.name}
-                      </h3>
-                      <div className=" lg:flex lg:gap-3  hidden  ">
-                        <div>{data?.Videos?.length} lectures</div>
-
-                        <div>.1hr 7min</div>
-                      </div>
-                    </div>
-                    {Openvisible && Previewid === data.idChapters && (
-                      <div
-                        className={`${
-                          theme === "light"
-                            ? "text-black bg-slate-50"
-                            : "bg-slate-950 text-slate-400"
-                        }`}
-                        style={{
-                          opacity: 1,
-                          transition: "opacity 500ms ease 0s",
-                        }}
-                      >
-                        <ul className="p-1">
-                          {data?.Videos.map((item, index) => (
-                            <li
-                              key={index}
-                              className="flex items-center gap-2 lg:gap-4 p-2"
-                            >
-                              <div>
-                                {!data.payment ? (
-                                  <MdOutlineOndemandVideo className="lg:text-base mt-1" />
-                                ) : (
-                                  <CgLock className="lg:text-sm" />
-                                )}
-                              </div>
-                              <div className="lg:w-10/12 w-full">
-                                <button
-                                  className=" underline text-sm lg:text-sm"
-                                  onClick={() => handleOpen(item)}
-                                >
-                                  {item?.video_name}
-                                </button>
-                              </div>
-                              {!data.payment && (
-                                <>
-                                  <button
-                                    onClick={() => handleOpen(item)}
-                                    className="mr-10 font-semibold underline hidden lg:block"
-                                  >
-                                    Preview
-                                  </button>
-                                  <div className="hidden lg:block">3.30</div>
-                                </>
-                              )}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div> */}
         </div>
       </section>
 
@@ -1402,4 +1280,4 @@ function Enrollment() {
   );
 }
 
-export default Enrollment;
+export default ExamEnrollment;

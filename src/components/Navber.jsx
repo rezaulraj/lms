@@ -198,6 +198,11 @@ const Navber = () => {
               </Link>
             </li>
             <li>
+              <Link onClick={() => setIsMenuOpen(false)} to={"/exam-center"}>
+                Exams
+              </Link>
+            </li>
+            <li>
               <Link onClick={() => setIsMenuOpen(false)} to={"/books"}>
                 Books
               </Link>

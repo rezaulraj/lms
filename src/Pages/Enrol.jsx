@@ -4,7 +4,6 @@ import roket from "../assets/payment/rocket.png";
 import Nagad from "../assets/payment/Nagad.png";
 import { BiRightArrow } from "react-icons/bi";
 import ScrollToTop from "../components/ScrollToTop";
-import axiosInstance from "../components/axiosInstance";
 import { toast, ToastContainer } from "react-toastify";
 import moment from "moment";
 const radios = [
@@ -38,7 +37,7 @@ function Enroll() {
   const userId = localStorage.getItem("userid");
   const idCourse = localStorage.getItem("idCourse");
   const coursePrice = localStorage.getItem("cPrice");
-
+  const idExams = localStorage.getItem("idExams");
   const [payment, setPayment] = useState("Bkash"); // Initialize state to store input value
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -61,6 +60,7 @@ function Enroll() {
     const saveData = {
       idUsers: userId,
       idCourses: idCourse,
+      idExams: idExams,
       date: formattedDate,
       payment_method: payment,
       amount: coursePrice,
